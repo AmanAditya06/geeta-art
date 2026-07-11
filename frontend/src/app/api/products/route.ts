@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
         include: {
           category: true,
           variants: true,
-          reviews: true,
         },
       }),
       prisma.product.count({ where }),

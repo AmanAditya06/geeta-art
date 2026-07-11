@@ -1,7 +1,5 @@
-export const dynamic = 'force-dynamic'
-
 import Link from "next/link"
-import { ChevronRight, Star, Shield, Truck, Hammer } from "lucide-react"
+import { ChevronRight, Star, Truck, Hammer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,29 +7,67 @@ import ProductCard from "@/components/product-card"
 import StarRating from "@/components/star-rating"
 import { testimonials } from "@/lib/sample-data"
 import { formatPrice } from "@/lib/utils"
-import type { Product } from "@/components/product-card"
-import { fetchFeaturedProducts, fetchCategories } from "@/lib/fetch-products"
-import { fetchBanners } from "@/lib/fetch-banners"
-import { PLACEHOLDER, getCategoryFallback } from "@/lib/placeholders"
+import { PLACEHOLDER, getCategoryFallback, getProductFallback } from "@/lib/placeholders"
 import { HeroCarousel } from "@/components/hero-carousel"
+import { prisma } from "@/lib/prisma"
+import type { Product } from "@/components/product-card"
+
+function normalizeProduct(p: any): Product {
+  let images: string[] = []
+  if (Array.isArray(p.images)) images = p.images
+  else if (typeof p.images === 'string') { try { const parsed = JSON.parse(p.images); images = Array.isArray(parsed) ? parsed : [] } catch {} }
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    category: p.category?.name || "",
+    categorySlug: p.category?.slug || "",
+    price: p.price,
+    compareAtPrice: p.comparePrice || undefined,
+    image: images[0] || getProductFallback(p.category?.slug),
+    images,
+    rating: p.avgRating || 4.5,
+    reviewCount: p.reviewCount || 0,
+    badge: p.comparePrice ? "Sale" : p.isFeatured ? "Best Seller" : "",
+    stock: p.stock,
+    variants: Array.isArray(p.variants) ? p.variants.map((v: any) => ({ id: v.id, name: v.name, price: v.price, stock: v.stock, sku: v.sku })) : [],
+  }
+}
+
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  interface Cat { name: string; slug: string; description: string; image: string; count: number }
-  const [featuredProducts, categories, banners] = await Promise.all([
-    fetchFeaturedProducts() as Promise<Product[]>,
-    fetchCategories() as Promise<Cat[]>,
-    fetchBanners(),
+  const [featuredRows, categories, banners, settingsRows] = await Promise.all([
+    prisma.product.findMany({
+      where: { isFeatured: true, isPublished: true },
+      take: 8,
+      include: { category: true, variants: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.category.findMany({
+      include: { _count: { select: { products: true } } },
+    }),
+    prisma.banner.findMany({
+      where: { active: true },
+      orderBy: { order: 'asc' },
+    }),
+    prisma.siteSetting.findMany(),
   ])
+
+  const featuredProducts = featuredRows.map(normalizeProduct)
   const bestSellers = featuredProducts.slice(0, 8)
 
-  let overlayImage = ""
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/settings`, { next: { revalidate: 60 }, signal: AbortSignal.timeout(3000) })
-    if (res.ok) {
-      const settings = await res.json()
-      overlayImage = settings.hero_overlay_image || ""
-    }
-  } catch {}
+  const cats = categories.map((c: any) => ({
+    name: c.name,
+    slug: c.slug,
+    description: c.description || "",
+    image: c.image || "",
+    count: c._count?.products || 0,
+  }))
+
+  const settingsObj: Record<string, string> = {}
+  for (const s of settingsRows) settingsObj[s.key] = s.value
+  const overlayImage = settingsObj.hero_overlay_image || ""
 
   return (
     <div>
@@ -49,7 +85,7 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((cat) => (
+            {cats.map((cat) => (
               <Link key={cat.slug} href={`/shop?category=${cat.slug}`}>
                 <Card className="group overflow-hidden transition-all hover:shadow-lg">
                   <div className="aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5">
