@@ -1,7 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.NEXTAUTH_URL || "http://localhost:3000/api"
 
 export const { handlers: { GET, POST } } = NextAuth({
   providers: [
@@ -29,7 +29,7 @@ export const { handlers: { GET, POST } } = NextAuth({
             id: data.user.id,
             name: data.user.name,
             email: data.user.email,
-            role: data.user.role.toLowerCase(),  // backend stores "USER"/"ADMIN", frontend uses lowercase
+            role: data.user.role.toLowerCase(),
             image: data.user.image,
             apiToken: data.token,
           }

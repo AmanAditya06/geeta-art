@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from "next/link"
 import { ChevronRight, Star, Shield, Truck, Hammer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,8 +15,6 @@ import { fetchBanners } from "@/lib/fetch-banners"
 import { PLACEHOLDER, getCategoryFallback } from "@/lib/placeholders"
 import { HeroCarousel } from "@/components/hero-carousel"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
-
 export default async function HomePage() {
   interface Cat { name: string; slug: string; description: string; image: string; count: number }
   const [featuredProducts, categories, banners] = await Promise.all([
@@ -26,7 +26,7 @@ export default async function HomePage() {
 
   let overlayImage = ""
   try {
-    const res = await fetch(`${API_BASE}/settings`, { next: { revalidate: 60 } })
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/settings`, { next: { revalidate: 60 }, signal: AbortSignal.timeout(3000) })
     if (res.ok) {
       const settings = await res.json()
       overlayImage = settings.hero_overlay_image || ""

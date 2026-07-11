@@ -1,6 +1,6 @@
 import { getProductFallback } from "./placeholders"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_BASE = "/api"
 
 interface FetchOptions extends RequestInit {
   token?: string
@@ -92,7 +92,6 @@ function normalizeProduct(p: ApiProduct) {
 export type NormalizedProduct = ReturnType<typeof normalizeProduct>
 
 export const api = {
-  // Auth
   async login(email: string, password: string) {
     return fetchAPI<{ token: string; user: { id: string; name: string; email: string; role: string; image: string | null } }>("/auth/login", {
       method: "POST",
@@ -100,7 +99,6 @@ export const api = {
     })
   },
 
-  // Products
   async getProducts(params?: {
     page?: number; limit?: number; category?: string; search?: string;
     sort?: string; minPrice?: number; maxPrice?: number; featured?: boolean;
@@ -127,7 +125,6 @@ export const api = {
     return normalizeProduct(data)
   },
 
-  // Categories
   async getCategories() {
     const data = await fetchAPI<ApiCategory[]>("/categories")
     return data.map((c) => ({
@@ -140,7 +137,6 @@ export const api = {
     }))
   },
 
-  // Orders
   async getOrders(token: string, params?: { page?: number; limit?: number }) {
     const search = new URLSearchParams()
     if (params?.page) search.set("page", String(params.page))
@@ -157,7 +153,6 @@ export const api = {
     })
   },
 
-  // Cart
   async getCart(token: string) {
     return fetchAPI<{ items: any[] }>("/cart", { token })
   },
