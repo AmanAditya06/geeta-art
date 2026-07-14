@@ -73,7 +73,7 @@ export default function CheckoutPage() {
 
     try {
       const token = (session.user as any)?.apiToken
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
 
       const res = await fetch(`${apiUrl}/orders`, {
         method: "POST",

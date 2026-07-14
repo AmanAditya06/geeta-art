@@ -15,6 +15,7 @@ import * as bannerController from './controllers/bannerController';
 import * as wishlistController from './controllers/wishlistController';
 import * as reviewController from './controllers/reviewController';
 import * as settingsController from './controllers/settingsController';
+import * as addressController from './controllers/addressController';
 import { requireAuth, requireAdmin } from './middleware/auth';
 import { validate } from './middleware/validate';
 import rateLimit from 'express-rate-limit';
@@ -63,6 +64,9 @@ app.delete('/api/products/:id', requireAuth, requireAdmin, productController.del
 
 app.get('/api/categories', categoryController.listCategories);
 app.get('/api/categories/:slug', categoryController.getCategoryBySlug);
+app.post('/api/categories', requireAuth, requireAdmin, categoryController.createCategory);
+app.put('/api/categories/:slug', requireAuth, requireAdmin, categoryController.updateCategory);
+app.delete('/api/categories/:slug', requireAuth, requireAdmin, categoryController.deleteCategory);
 
 app.post('/api/orders', requireAuth, validate({ body: orderSchema }), orderController.createOrder);
 app.get('/api/orders', requireAuth, orderController.listUserOrders);
@@ -94,6 +98,11 @@ app.post('/api/reviews', requireAuth, validate({ body: reviewSchema }), reviewCo
 
 app.get('/api/settings', settingsController.getSettings);
 app.put('/api/settings', requireAuth, requireAdmin, settingsController.updateSettings);
+
+app.get('/api/addresses', requireAuth, addressController.listAddresses);
+app.post('/api/addresses', requireAuth, addressController.createAddress);
+app.put('/api/addresses/:id', requireAuth, addressController.updateAddress);
+app.delete('/api/addresses/:id', requireAuth, addressController.deleteAddress);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);

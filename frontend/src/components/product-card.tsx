@@ -26,6 +26,7 @@ export interface Product {
   slug: string
   category: string
   categorySlug?: string
+  description?: string
   price: number
   compareAtPrice?: number
   image: string

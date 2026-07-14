@@ -143,6 +143,10 @@ export async function getProductBySlug(req: Request, res: Response) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    if (!product.isPublished) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
     const ratings = product.reviews.map((r) => r.rating);
     const avgRating = ratings.length > 0
       ? ratings.reduce((a, b) => a + b, 0) / ratings.length

@@ -5,9 +5,7 @@ import {
   TrendingUp,
   ShoppingBag,
   Package,
-  Users,
   AlertTriangle,
-  MoreHorizontal,
   Download,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { useSession } from "next-auth/react"
+import Link from "next/link"
 import {
   LineChart,
   Line,
@@ -25,42 +25,59 @@ import {
   ResponsiveContainer,
 } from "recharts"
 
-const chartData = [
-  { name: "Jan", revenue: 85000 },
-  { name: "Feb", revenue: 92000 },
-  { name: "Mar", revenue: 78000 },
-  { name: "Apr", revenue: 101000 },
-  { name: "May", revenue: 95000 },
-  { name: "Jun", revenue: 112000 },
-  { name: "Jul", revenue: 125000 },
-  { name: "Aug", revenue: 108000 },
-  { name: "Sep", revenue: 135000 },
-  { name: "Oct", revenue: 142000 },
-  { name: "Nov", revenue: 128000 },
-  { name: "Dec", revenue: 158000 },
-]
+const statusColors: Record<string, "success" | "warning" | "default" | "destructive" | "secondary"> = {
+  delivered: "success",
+  shipped: "warning",
+  processing: "default",
+  pending: "secondary",
+  cancelled: "destructive",
+}
 
 export default function AdminDashboardPage() {
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "12m">("12m")
+  const { data: session } = useSession()
   const [products, setProducts] = useState<any[]>([])
+  const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const token = (session?.user as any)?.apiToken
+
     Promise.all([
       api.getProducts().then((r) => setProducts(r.products as any)),
+      token
+        ? fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders/admin`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then((r) => r.ok ? r.json() : { orders: [] })
+            .then((d) => setOrders(d.orders || []))
+            .catch(() => {})
+        : Promise.resolve(),
     ]).finally(() => setLoading(false))
-  }, [])
+  }, [session])
 
   const totalProducts = products.length
   const totalStock = products.reduce((sum: number, p: any) => sum + p.stock, 0)
   const lowStock = products.filter((p: any) => p.stock > 0 && p.stock <= 5)
   const outOfStock = products.filter((p: any) => p.stock === 0)
+  const totalRevenue = orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+
+  const chartData = (() => {
+    const monthMap: Record<string, number> = {}
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    months.forEach((m) => { monthMap[m] = 0 })
+    orders.forEach((o: any) => {
+      const d = new Date(o.createdAt)
+      const month = months[d.getMonth()]
+      monthMap[month] = (monthMap[month] || 0) + (o.total || 0)
+    })
+    return months.map((name) => ({ name, revenue: monthMap[name] || 0 }))
+  })()
 
   const stats = [
-    { label: "Total Products", value: totalProducts, icon: Package, change: "", color: "text-blue-600" },
-    { label: "Total Stock", value: totalStock, icon: TrendingUp, change: "", color: "text-green-600" },
-    { label: "Low Stock Items", value: lowStock.length, icon: AlertTriangle, change: "", color: "text-amber-600" },
-    { label: "Out of Stock", value: outOfStock.length, icon: ShoppingBag, change: "", color: "text-red-600" },
+    { label: "Total Revenue", value: totalRevenue, icon: TrendingUp, color: "text-green-600" },
+    { label: "Total Orders", value: orders.length, icon: ShoppingBag, color: "text-blue-600" },
+    { label: "Total Products", value: totalProducts, icon: Package, color: "text-purple-600" },
+    { label: "Low Stock Items", value: lowStock.length, icon: AlertTriangle, color: "text-amber-600" },
   ]
 
   return (
@@ -88,7 +105,6 @@ export default function AdminDashboardPage() {
                   <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10">
                     <Icon className="size-5 text-primary" />
                   </div>
-                  {stat.change && <Badge variant="success" className="text-[10px]">{stat.change}</Badge>}
                 </div>
                 <p className="mt-4 text-2xl font-bold text-wood-dark">
                   {stat.label === "Total Revenue" ? formatPrice(stat.value) : stat.value.toLocaleString("en-IN")}
@@ -105,19 +121,6 @@ export default function AdminDashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle>Revenue Overview</CardTitle>
-            <div className="flex gap-1">
-              {(["7d", "30d", "12m"] as const).map((range) => (
-                <Button
-                  key={range}
-                  variant={timeRange === range ? "default" : "ghost"}
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setTimeRange(range)}
-                >
-                  {range}
-                </Button>
-              ))}
-            </div>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -174,9 +177,11 @@ export default function AdminDashboardPage() {
                 <p className="text-sm text-gray-500 text-center py-4">No low stock items</p>
               )}
             </div>
-            <Button variant="ghost" size="sm" className="w-full mt-4">
-              View All Products
-            </Button>
+            <Link href="/admin/products" className="block mt-4">
+              <Button variant="ghost" size="sm" className="w-full">
+                View All Products
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -185,7 +190,9 @@ export default function AdminDashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle>Recent Orders</CardTitle>
-          <Button variant="outline" size="sm">View All</Button>
+          <Link href="/admin/orders">
+            <Button variant="outline" size="sm">View All</Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -198,15 +205,31 @@ export default function AdminDashboardPage() {
                   <th className="text-left py-3 px-2 font-semibold text-wood-dark">Total</th>
                   <th className="text-left py-3 px-2 font-semibold text-wood-dark">Status</th>
                   <th className="text-left py-3 px-2 font-semibold text-wood-dark hidden md:table-cell">Date</th>
-                  <th className="py-3 px-2"></th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
-                    No orders yet. Orders will appear here once customers start purchasing.
-                  </td>
-                </tr>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      No orders yet. Orders will appear here once customers start purchasing.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.slice(0, 5).map((order: any) => (
+                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-2 font-medium text-wood-dark">{order.id.slice(0, 8)}</td>
+                      <td className="py-3 px-2 text-gray-600">{order.user?.name || "N/A"}</td>
+                      <td className="py-3 px-2 text-gray-600 hidden sm:table-cell">{order.items?.length || 0}</td>
+                      <td className="py-3 px-2 font-medium text-wood-dark">{formatPrice(order.total)}</td>
+                      <td className="py-3 px-2">
+                        <Badge variant={statusColors[order.status] || "default"} className="capitalize">
+                          {order.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-2 text-gray-500 hidden md:table-cell">{new Date(order.createdAt).toLocaleDateString("en-IN")}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

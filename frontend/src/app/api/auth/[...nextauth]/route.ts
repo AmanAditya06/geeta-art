@@ -7,9 +7,11 @@ async function getHandlers() {
     const { default: NextAuth } = await import("next-auth")
     const { default: Credentials } = await import("next-auth/providers/credentials")
     
-    const API_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}/api` 
-      : "http://localhost:3000/api"
+    const API_URL = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api`
+      : process.env.NEXTAUTH_URL
+        ? `${process.env.NEXTAUTH_URL}/api`
+        : "http://localhost:3000/api"
 
     handlers = NextAuth({
       providers: [

@@ -35,7 +35,7 @@ interface ReviewData {
   user: { id: string; name: string | null; image: string | null }
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api"
 
 export default function ProductDetailClient({ product, relatedProducts = [] }: { product: Product; relatedProducts?: Product[] }) {
   const [selectedVariant, setSelectedVariant] = useState<{ id: string; name: string; price: number; stock: number } | null>(null)
@@ -162,7 +162,7 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
           </div>
 
           <p className="mt-4 text-wood-muted leading-relaxed">
-            Handcrafted from premium quality solid wood, this {product.name.toLowerCase()} brings timeless elegance to your space. Each piece features unique wood grain patterns and meticulous attention to detail.
+            {product.description || `Handcrafted from premium quality solid wood, this ${product.name.toLowerCase()} brings timeless elegance to your space. Each piece features unique wood grain patterns and meticulous attention to detail.`}
           </p>
 
           <div className="mt-6 space-y-4">

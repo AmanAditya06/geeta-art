@@ -27,7 +27,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     const token = (session?.user as any)?.apiToken
     if (!token) { setLoading(false); return }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/admin`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/orders/admin`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())

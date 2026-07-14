@@ -40,7 +40,7 @@ function AccountContent() {
   const { data: session } = useSession()
   const [signingIn, setSigningIn] = useState(false)
   const [signInError, setSignInError] = useState("")
-  const [creds, setCreds] = useState({ email: "user@geetaart.com", password: "user123" })
+  const [creds, setCreds] = useState({ email: "", password: "" })
   const { addItem } = useCart()
   const { items: wishlistItems, toggle: toggleWishlist } = useWishlist()
   const [addedToCartIds, setAddedToCartIds] = useState<Set<string>>(new Set())
@@ -50,7 +50,7 @@ function AccountContent() {
   const [profileLoading, setProfileLoading] = useState(true)
 
   const token = (session?.user as any)?.apiToken
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
 
   useEffect(() => {
     if (!token) { setOrdersLoading(false); setProfileLoading(false); return }
@@ -106,7 +106,7 @@ function AccountContent() {
           </CardContent>
         </Card>
         <p className="text-xs text-wood-muted text-center mt-4">
-          Demo: user@geetaart.com / user123 &nbsp;|&nbsp; Admin: admin@geetaart.com / admin123
+          Don&apos;t have an account? Contact the administrator.
         </p>
       </div>
     )

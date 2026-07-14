@@ -59,7 +59,7 @@ export default function NewProductPage() {
         stock: Number(form.stock),
         images,
       }
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),

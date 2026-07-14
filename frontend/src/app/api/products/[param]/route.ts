@@ -64,7 +64,7 @@ export async function PUT(
 
     const { param } = await params;
 
-    const existing = await prisma.product.findUnique({ where: { id: param } });
+    const existing = await prisma.product.findFirst({ where: { OR: [{ id: param }, { slug: param }] } });
     if (!existing) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
@@ -78,30 +78,49 @@ export async function PUT(
     const { variants, images, categoryId, price, comparePrice, ...data } = parsed.data;
 
     const product = await prisma.$transaction(async (tx) => {
-      if (variants) {
-        await tx.productVariant.deleteMany({ where: { productId: param } });
+      if (variants !== undefined && variants !== null) {
+        if (variants.length === 0) {
+          await tx.productVariant.deleteMany({ where: { productId: existing.id } });
+        } else {
+          const existingVariants = await tx.productVariant.findMany({ where: { productId: existing.id } });
+          const existingIds = new Set(existingVariants.map((v) => v.id));
+          const incomingIds = new Set(variants.filter((v: any) => v.id).map((v: any) => v.id));
+
+          for (const id of existingIds) {
+            if (!incomingIds.has(id)) {
+              await tx.productVariant.delete({ where: { id } });
+            }
+          }
+
+          for (const v of variants) {
+            if ((v as any).id && existingIds.has((v as any).id)) {
+              await tx.productVariant.update({
+                where: { id: (v as any).id },
+                data: { name: v.name, price: v.price, stock: v.stock ?? 0, sku: v.sku },
+              });
+            } else {
+              await tx.productVariant.create({
+                data: {
+                  productId: existing.id,
+                  name: v.name,
+                  price: v.price,
+                  stock: v.stock ?? 0,
+                  sku: v.sku,
+                },
+              });
+            }
+          }
+        }
       }
 
       return tx.product.update({
-        where: { id: param },
+        where: { id: existing.id },
         data: {
           ...(data as any),
           ...(price !== undefined ? { price } : {}),
           ...(comparePrice !== undefined ? { comparePrice } : {}),
           ...(images !== undefined ? { images: JSON.stringify(images) } : {}),
           ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
-          ...(variants && variants.length > 0
-            ? {
-                variants: {
-                  create: variants.map((v: { name: string; price: number; stock?: number; sku?: string }) => ({
-                    name: v.name,
-                    price: v.price,
-                    stock: v.stock ?? 0,
-                    sku: v.sku,
-                  })),
-                },
-              }
-            : {}),
         },
         include: {
           category: true,
@@ -133,12 +152,12 @@ export async function DELETE(
 
     const { param } = await params;
 
-    const existing = await prisma.product.findUnique({ where: { id: param } });
+    const existing = await prisma.product.findFirst({ where: { OR: [{ id: param }, { slug: param }] } });
     if (!existing) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
 
-    await prisma.product.delete({ where: { id: param } });
+    await prisma.product.delete({ where: { id: existing.id } });
 
     return NextResponse.json({ message: 'Product deleted successfully' });
   } catch (error) {

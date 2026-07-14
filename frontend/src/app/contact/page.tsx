@@ -26,15 +26,31 @@ export default function ContactPage() {
     message: "",
   })
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const handleChange = (field: keyof ContactForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 3000)
+    setSending(true)
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      if (res.ok) {
+        setSubmitted(true)
+        setForm({ name: "", email: "", phone: "", subject: "", message: "" })
+        setTimeout(() => setSubmitted(false), 5000)
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSending(false)
+    }
   }
 
   const contactInfo = [
@@ -130,8 +146,8 @@ export default function ContactPage() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="mt-6" size="lg">
-                    <Send className="size-4 mr-2" /> Send Message
+                  <Button type="submit" className="mt-6" size="lg" disabled={sending}>
+                    <Send className="size-4 mr-2" /> {sending ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               )}

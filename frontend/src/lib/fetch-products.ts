@@ -86,15 +86,21 @@ export async function fetchCategories() {
   }
 }
 
+export function parseProductImages(product: { images: string | string[] }): string[] {
+  if (Array.isArray(product.images)) return product.images
+  if (typeof product.images === 'string') {
+    try { const parsed = JSON.parse(product.images); return Array.isArray(parsed) ? parsed : [] } catch {}
+  }
+  return []
+}
+
 function normalize(p: any) {
-  let images: string[] = []
-  if (Array.isArray(p.images)) { images = p.images }
-  else if (typeof p.images === 'string') { try { const parsed = JSON.parse(p.images); images = Array.isArray(parsed) ? parsed : [] } catch {} }
+  const images = parseProductImages(p)
   return {
     id: p.id,
     name: p.name,
     slug: p.slug,
-    category: p.category?.name || "",
+    category: p.category?.name || p.category || "",
     categorySlug: p.category?.slug || "",
     price: p.price,
     compareAtPrice: p.comparePrice || undefined,

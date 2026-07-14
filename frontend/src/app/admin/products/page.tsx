@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Plus, Search, Edit3, Trash2 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -29,10 +29,14 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadProducts = () => {
     api.getProducts().then((r) => {
       setProducts(r.products as any)
     }).catch(() => {}).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadProducts()
   }, [])
 
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products])
@@ -44,6 +48,26 @@ export default function AdminProductsPage() {
       return matchesSearch && matchesCategory
     })
   }, [products, search, categoryFilter])
+
+  const handleDelete = async (slug: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return
+    const token = (session?.user as any)?.apiToken
+    if (!token) return
+
+    try {
+      const res = await fetch(`/api/products/${slug}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || "Failed to delete")
+      }
+      loadProducts()
+    } catch (err: any) {
+      alert(err.message || "Failed to delete product")
+    }
+  }
 
   return (
     <div>
@@ -108,7 +132,7 @@ export default function AdminProductsPage() {
                         </div>
                         <div>
                           <p className="font-medium text-wood-dark">{product.name}</p>
-                          <p className="text-xs text-gray-500">#{product.id}</p>
+                          <p className="text-xs text-gray-500">#{product.id.slice(0, 8)}</p>
                         </div>
                       </div>
                     </td>
@@ -131,7 +155,7 @@ export default function AdminProductsPage() {
                             <Edit3 className="size-3.5" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="icon" className="text-red-500">
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(product.slug)}>
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>

@@ -8,26 +8,20 @@ import { handleImageError } from "@/lib/placeholders"
 const quickLinks = [
   { name: "About Us", href: "/about" },
   { name: "Contact Us", href: "/contact" },
-  { name: "FAQs", href: "/faqs" },
-  { name: "Shipping & Delivery", href: "/shipping" },
-  { name: "Returns & Exchanges", href: "/returns" },
 ]
 
 const categories = [
-  { name: "Sofas & Seating", href: "/shop?category=sofas-seating" },
-  { name: "Tables & Desks", href: "/shop?category=tables-desks" },
-  { name: "Beds & Headboards", href: "/shop?category=beds-headboards" },
-  { name: "Cabinets & Storage", href: "/shop?category=cabinets-storage" },
-  { name: "Dining", href: "/shop?category=dining" },
-  { name: "Decor", href: "/shop?category=decor" },
+  { name: "Sofas", href: "/shop?category=sofas" },
+  { name: "Dining Tables", href: "/shop?category=dining-tables" },
+  { name: "Chairs", href: "/shop?category=chairs" },
+  { name: "Beds", href: "/shop?category=beds" },
+  { name: "Cabinets", href: "/shop?category=cabinets" },
+  { name: "Shelves", href: "/shop?category=shelves" },
 ]
 
 const customerService = [
   { name: "My Account", href: "/account" },
-  { name: "Order Tracking", href: "/account/orders" },
-  { name: "Wishlist", href: "/wishlist" },
-  { name: "Privacy Policy", href: "/privacy" },
-  { name: "Terms & Conditions", href: "/terms" },
+  { name: "Shop All", href: "/shop" },
 ]
 
 export function Footer() {
@@ -35,7 +29,7 @@ export function Footer() {
   const [siteName, setSiteName] = useState("Geeta Art")
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/settings`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/settings`)
       .then((r) => r.json())
       .then((data) => {
         if (data.logo_url) setLogoUrl(data.logo_url)

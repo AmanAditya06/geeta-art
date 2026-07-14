@@ -11,7 +11,7 @@ import { useSession, signOut } from "next-auth/react"
 import { SearchModal } from "@/components/search-modal"
 import { handleImageError } from "@/lib/placeholders"
 
-const categories = [
+const fallbackCategories = [
   { name: "All", href: "/shop" },
   { name: "Sofas", href: "/shop?category=sofas" },
   { name: "Dining Tables", href: "/shop?category=dining-tables" },
@@ -29,16 +29,33 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [logoUrl, setLogoUrl] = useState("")
   const [siteName, setSiteName] = useState("Geeta Art")
+  const [categories, setCategories] = useState(fallbackCategories)
   const userRef = useRef<HTMLDivElement>(null)
   const { data: session } = useSession()
   const itemCount = useCart((s) => s.itemCount)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/settings`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
+    fetch(`${apiUrl}/settings`)
       .then((r) => r.json())
       .then((data) => {
         if (data.logo_url) setLogoUrl(data.logo_url)
         if (data.site_name) setSiteName(data.site_name)
+      })
+      .catch(() => {})
+
+    fetch(`${apiUrl}/categories`)
+      .then((r) => r.json())
+      .then((cats) => {
+        if (Array.isArray(cats) && cats.length > 0) {
+          setCategories([
+            { name: "All", href: "/shop" },
+            ...cats.map((c: any) => ({
+              name: c.name,
+              href: `/shop?category=${c.slug}`,
+            })),
+          ])
+        }
       })
       .catch(() => {})
   }, [])

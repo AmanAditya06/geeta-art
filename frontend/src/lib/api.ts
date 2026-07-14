@@ -1,4 +1,5 @@
 import { getProductFallback } from "./placeholders"
+import { parseProductImages } from "./fetch-products"
 
 const API_BASE = "/api"
 
@@ -54,16 +55,8 @@ export interface PaginatedResponse<T> {
   pagination: { page: number; limit: number; total: number; totalPages: number }
 }
 
-function parseImages(product: ApiProduct): string[] {
-  if (Array.isArray(product.images)) return product.images
-  if (typeof product.images === 'string') {
-    try { const parsed = JSON.parse(product.images); return Array.isArray(parsed) ? parsed : [] } catch {}
-  }
-  return []
-}
-
 function normalizeProduct(p: ApiProduct) {
-  const images = parseImages(p)
+  const images = parseProductImages(p)
   return {
     id: p.id,
     name: p.name,

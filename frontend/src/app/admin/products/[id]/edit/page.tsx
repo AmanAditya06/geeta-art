@@ -39,7 +39,7 @@ export default function EditProductPage() {
   })
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
     const token = (session?.user as any)?.apiToken
 
     Promise.all([
@@ -76,7 +76,7 @@ export default function EditProductPage() {
     try {
       const token = (session?.user as any)?.apiToken
       if (!token) throw new Error("Not authenticated")
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
       await fetch(`${apiUrl}/products/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

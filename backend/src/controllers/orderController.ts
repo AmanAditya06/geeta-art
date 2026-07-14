@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
@@ -49,7 +50,6 @@ export async function createOrder(req: Request, res: Response) {
       }
 
       let price = product.price;
-      let stock = product.stock;
 
       if (item.variantId) {
         const variant = product.variants.find((v) => v.id === item.variantId);
@@ -57,11 +57,6 @@ export async function createOrder(req: Request, res: Response) {
           return res.status(404).json({ message: `Variant ${item.variantId} not found` });
         }
         price = variant.price;
-        stock = variant.stock;
-      }
-
-      if (stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
       }
 
       orderItemsData.push({
@@ -77,15 +72,21 @@ export async function createOrder(req: Request, res: Response) {
     const order = await prisma.$transaction(async (tx) => {
       for (const item of orderItemsData) {
         if (item.variantId) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
+          const updated = await tx.productVariant.updateMany({
+            where: { id: item.variantId, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
+          if (updated.count === 0) {
+            throw new Error(`Insufficient stock for variant ${item.variantId}`);
+          }
         } else {
-          await tx.product.update({
-            where: { id: item.productId },
+          const updated = await tx.product.updateMany({
+            where: { id: item.productId, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
+          if (updated.count === 0) {
+            throw new Error(`Insufficient stock for product ${item.productId}`);
+          }
         }
       }
 
@@ -133,8 +134,11 @@ export async function createOrder(req: Request, res: Response) {
 
     const parsed = parseOrder(order);
     return res.status(201).json({ ...parsed, razorpayOrderId: razorpayOrder?.id || null });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create order error:', error);
+    if (error.message?.includes('Insufficient stock')) {
+      return res.status(400).json({ message: error.message });
+    }
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -290,13 +294,24 @@ export async function verifyPayment(req: Request, res: Response) {
     const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
 
     const body = razorpayOrderId + '|' + razorpayPaymentId;
-    const expectedSignature = require('crypto')
+    const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
       .update(body)
       .digest('hex');
 
-    if (expectedSignature !== razorpaySignature) {
+    const expectedBuf = Buffer.from(expectedSignature, 'hex');
+    const receivedBuf = Buffer.from(razorpaySignature || '', 'hex');
+
+    if (expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
       return res.status(400).json({ message: 'Invalid payment signature' });
+    }
+
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    if (order.paymentId) {
+      return res.status(400).json({ message: 'Payment already verified' });
     }
 
     await prisma.order.update({
