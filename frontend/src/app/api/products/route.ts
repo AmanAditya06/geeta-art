@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('List products error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal server error', error: error?.message || String(error) }, { status: 500 });
   }
 }
